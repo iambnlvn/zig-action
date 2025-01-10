@@ -1,0 +1,36 @@
+name: Install Zig Language
+description: Install Zig language from master or specified version and flavor
+
+runs:
+  using: composite
+  steps:
+    - name: Check Input Validity
+      shell: bash
+      run: |
+        if [[ -z "${{ inputs.version }}" ]]; then
+          echo "Error: Input 'version' is required."
+          exit 1
+        fi
+        if [[ -z "${{ inputs.flavor }}" ]]; then
+          echo "Error: Input 'flavor' is required."
+          exit 1
+        fi
+    - name: Install Zig
+      run: ${{ github.action_path }}/install.sh ${{ inputs.version }} ${{ inputs.flavor }}
+      shell: bash
+    - name: Set Output
+      id: set-output
+      run: echo "zig-bin=/path/to/installed/zig" >> $GITHUB_ENV
+      shell: bash
+
+inputs:
+  version:
+    description: "The version of Zig to install (e.g., 'master', '0.11.0', etc.)"
+    default: master
+    required: true
+  flavor:
+    description: "The build flavor to install (e.g., 'x86_64-linux', 'aarch64-linux', etc.)"
+    required: true
+outputs:
+  zig-bin:
+    description: "The path to the installed Zig binary."
