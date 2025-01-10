@@ -44,7 +44,6 @@ hasItem() {
     return 1 # Item not found
 }
 
-
 # Fetch Zig data
 fetchZigData() {
     local url="https://ziglang.org/download/index.json"
@@ -64,7 +63,7 @@ fetchZigData() {
         sleep $waitTime
     done
 
-    echo "Failed to fetch Zig data after $retries attempts. Check $logFile for details."
+    printProgressFailure "Failed to fetch Zig data after $retries attempts. Check $logFile for details."
     return 1
 }
 
@@ -73,7 +72,7 @@ getAvailableVersions() {
     echo "$zigData" | jq -cr 'keys[]' | sort -V
 }
 
-# Get flavor information 
+# Get flavor information
 getFlavour() {
     local version="$1"
     local flavour="$2"
@@ -82,14 +81,13 @@ getFlavour() {
         '.[$version][$flavour]'
 }
 
-zigData=$(fetchZigData)
 # Check if necessary commands are available
 checkDeps() {
     if ! command -v curl &> /dev/null || ! command -v jq &> /dev/null || ! command -v sha256sum &> /dev/null; then
-        echo "Missing dependencies detected. You need sudo privileges to install them"
+        printProgessWarn "Missing dependencies detected. Installing them..."
         sudo -v
         if [[ $? -ne 0 ]]; then
-            printProgressFailure "Error: Sudo privileges are required to install missing dependencies.\n"
+            printProgressFailure "Error: Sudo privileges are required to install missing dependencies."
             exit 1
         fi
 
@@ -122,13 +120,14 @@ checkDeps() {
     fi
 }
 
+# Main script starts here
+zigData=$(fetchZigData)
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
+
 VERSIONS=$(getAvailableVersions)
 
-# Start of the script
-if command -v zig &> /dev/null; then
-    printProgressSuccess "Zig is already installed. Skipping installation."
-    exit 0
-fi
 if [[ $# -lt 2 ]]; then
     printUsage
     printProgressFailure "Error: Missing arguments"
@@ -179,20 +178,19 @@ printProgessWarn "Verifying checksum"
 fileChecksum=$(sha256sum "${filename}" | cut -d ' ' -f1)
 if [[ "${shasum}" != "${fileChecksum}" ]]; then
     printProgressFailure "Error: Checksum mismatch for '${filename}'"
+    rm -f "${filename}" # Clean up the corrupted file
     exit 1
 fi
 printProgressSuccess "Checksum verified"
 
 printProgessWarn "Installing Zig from '${filename}'"
-tar -xf "${filename}" 2>> install_errors.log || {
-    printProgressFailure "Error: Failed to extract tarball '${filename}' (see install_errors.log for details)"
+tar -xf "${filename}" || {
+    printProgressFailure "Error: Failed to extract tarball '${filename}'"
     exit 1
 }
-printProgessWarn "Cleaning up"
-if ! rm -f "${filename}"; then
-    printProgressFailure "Error: Failed to remove tarball '${filename}'"
-    exit 1
-fi
+
+# Delete tarball after extraction
+rm -f "${filename}" || printProgessWarn "Warning: Failed to remove tarball '${filename}'"
 
 filedir="${filename%.tar.xz}"
 mkdir -p "${PWD}/bin"
