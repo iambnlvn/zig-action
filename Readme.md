@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install Zig
-        uses: iambnlvn/zig-action
+        uses: iambnlvn/zig-action@v1
         with:
           version: "master" # Specify the Zig version (e.g., master, 0.11.0)
           flavor: "x86_64-linux" # Specify the build flavor
